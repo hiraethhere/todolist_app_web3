@@ -83,8 +83,8 @@
     </div>
 
     <script type="module">
-        // Menggunakan fungsi terbaru dari Freighter v2+
-        import { isConnected, requestAccess, getAddress } from 'https://esm.sh/@stellar/freighter-api';
+        // Menggunakan JSDelivr yang dijamin stabil format ES Module-nya
+        import * as freighterApi from 'https://cdn.jsdelivr.net/npm/@stellar/freighter-api@6.0.1/+esm';
         
         // Ganti dengan Contract ID yang didapat dari terminal!
         const CONTRACT_ID = "CB7HQHDN4O7P5DMJPKGQ5GO7SZXS7XMIF4C73TUL36S7UDN6KHEODO2D"; 
@@ -97,7 +97,11 @@
         const taskContent = document.getElementById('taskContent');
         const taskList = document.getElementById('taskList');
 
-        // Fungsi untuk mengurus perubahan tampilan UI jika dompet terhubung
+        // Kompatibilitas fungsi otomatis (mendukung Freighter lama dan baru)
+        const checkConnectionStatus = freighterApi.isConnected || freighterApi.isAllowed;
+        const requestWalletAccess = freighterApi.requestAccess || freighterApi.setAllowed;
+        const getWalletAddress = freighterApi.getAddress || freighterApi.getUserInfo;
+
         function updateUI(publicKey) {
             walletAddressSpan.innerText = publicKey.slice(0, 6) + '...' + publicKey.slice(-6);
             connectBtn.classList.add('hidden');
@@ -106,37 +110,42 @@
             taskList.innerHTML = `<p>Mengambil data dari blockchain...</p>`;
         }
 
-        // Cek secara diam-diam apakah sebelumnya sudah pernah login
         async function checkSession() {
-            const connectedStatus = await isConnected();
-            if (connectedStatus.isConnected) {
-                // getAddress() akan mengembalikan public key tanpa memunculkan pop-up
-                // jika pengguna sudah pernah memberikan izin sebelumnya
-                const addressObj = await getAddress();
-                if (addressObj.address) {
-                    updateUI(addressObj.address);
+            try {
+                const status = await checkConnectionStatus();
+                // Menyesuaikan balasan format boolean atau object
+                if (status === true || status?.isConnected) {
+                    const info = await getWalletAddress();
+                    const address = info?.address || info?.publicKey;
+                    if (address) updateUI(address);
                 }
+            } catch (err) {
+                console.log("Sesi belum aktif");
             }
         }
 
-        // Saat tombol connect ditekan
         connectBtn.addEventListener('click', async () => {
-            const connectedStatus = await isConnected();
-            if (!connectedStatus.isConnected) {
-                alert("Ekstensi Freighter tidak terdeteksi! Pastikan kamu sudah menginstalnya di browser ini.");
-                return;
-            }
+            try {
+                const status = await checkConnectionStatus();
+                if (status === false || status?.isConnected === false) {
+                    alert("Ekstensi Freighter tidak terdeteksi atau sedang terkunci!");
+                    return;
+                }
 
-            // requestAccess() akan memunculkan pop-up izin untuk koneksi
-            const accessObj = await requestAccess();
-            if (accessObj.error) {
-                console.error("Gagal terhubung:", accessObj.error);
-            } else if (accessObj.address) {
-                updateUI(accessObj.address);
+                // Memunculkan pop-up dompet
+                const access = await requestWalletAccess();
+                if (access?.error) {
+                    console.error("Gagal mendapat izin:", access.error);
+                } else {
+                    const info = await getWalletAddress();
+                    const address = info?.address || info?.publicKey;
+                    if (address) updateUI(address);
+                }
+            } catch (err) {
+                console.error("Proses koneksi dibatalkan", err);
             }
         });
 
-        // Form Submit
         todoForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = e.target.querySelector('button');
@@ -156,7 +165,7 @@
             }, 1500);
         });
 
-        // Jalankan pengecekan otomatis saat halaman pertama kali dimuat
+        // Cek langsung saat file dibuka
         checkSession();
     </script>
 </body>

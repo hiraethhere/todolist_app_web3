@@ -14,7 +14,7 @@ The user interface features a bold, Neo-Brutalism design aesthetic, ensuring a c
 ## 🔗 Smart Contract
 This application interacts with a smart contract deployed on the Stellar Testnet.
 - **Network:** Stellar Testnet
-- **Contract ID:** CB7HQHDN4O7P5DMJPKGQ5GO7SZXS7XMIF4C73TUL36S7UDN6KHEODO2D`
+- **Contract ID:** CB7HQHDN4O7P5DMJPKGQ5GO7SZXS7XMIF4C73TUL36S7UDN6KHEODO2D
 
 ## 📸 Screenshot
 ![Testnet UI Screenshot](Screenshot.PNG)
