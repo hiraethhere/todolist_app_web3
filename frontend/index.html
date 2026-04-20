@@ -83,8 +83,8 @@
     </div>
 
     <script type="module">
-        // Mengambil fungsi dari Freighter Wallet
-        import { isAllowed, setAllowed, getUserInfo } from 'https://esm.sh/@stellar/freighter-api';
+        // Menggunakan fungsi terbaru dari Freighter v2+
+        import { isConnected, requestAccess, getAddress } from 'https://esm.sh/@stellar/freighter-api';
         
         // Ganti dengan Contract ID yang didapat dari terminal!
         const CONTRACT_ID = "CB7HQHDN4O7P5DMJPKGQ5GO7SZXS7XMIF4C73TUL36S7UDN6KHEODO2D"; 
@@ -97,36 +97,52 @@
         const taskContent = document.getElementById('taskContent');
         const taskList = document.getElementById('taskList');
 
-        async function checkConnection() {
-            if (await isAllowed()) {
-                const userInfo = await getUserInfo();
-                if (userInfo) {
-                    const pk = userInfo.publicKey;
-                    walletAddressSpan.innerText = pk.slice(0, 6) + '...' + pk.slice(-6);
-                    
-                    connectBtn.classList.add('hidden');
-                    walletInfo.classList.remove('hidden');
-                    todoForm.classList.remove('hidden');
-                    
-                    // Simulasi UI jika berhasil konek
-                    taskList.innerHTML = `<p>Mengambil data dari blockchain...</p>`;
+        // Fungsi untuk mengurus perubahan tampilan UI jika dompet terhubung
+        function updateUI(publicKey) {
+            walletAddressSpan.innerText = publicKey.slice(0, 6) + '...' + publicKey.slice(-6);
+            connectBtn.classList.add('hidden');
+            walletInfo.classList.remove('hidden');
+            todoForm.classList.remove('hidden');
+            taskList.innerHTML = `<p>Mengambil data dari blockchain...</p>`;
+        }
+
+        // Cek secara diam-diam apakah sebelumnya sudah pernah login
+        async function checkSession() {
+            const connectedStatus = await isConnected();
+            if (connectedStatus.isConnected) {
+                // getAddress() akan mengembalikan public key tanpa memunculkan pop-up
+                // jika pengguna sudah pernah memberikan izin sebelumnya
+                const addressObj = await getAddress();
+                if (addressObj.address) {
+                    updateUI(addressObj.address);
                 }
             }
         }
 
+        // Saat tombol connect ditekan
         connectBtn.addEventListener('click', async () => {
-            await setAllowed(); // Memicu pop-up Freighter
-            await checkConnection();
+            const connectedStatus = await isConnected();
+            if (!connectedStatus.isConnected) {
+                alert("Ekstensi Freighter tidak terdeteksi! Pastikan kamu sudah menginstalnya di browser ini.");
+                return;
+            }
+
+            // requestAccess() akan memunculkan pop-up izin untuk koneksi
+            const accessObj = await requestAccess();
+            if (accessObj.error) {
+                console.error("Gagal terhubung:", accessObj.error);
+            } else if (accessObj.address) {
+                updateUI(accessObj.address);
+            }
         });
 
+        // Form Submit
         todoForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = e.target.querySelector('button');
             btn.innerText = "Memproses Transaksi...";
             btn.style.backgroundColor = "#ffcc00";
             
-            // Di sini nantinya fungsi `Notes` dari kontrak dieksekusi 
-            // menggunakan @stellar/stellar-sdk
             console.log(`Menambahkan tugas ke Contract: ${CONTRACT_ID}`);
             console.log("Judul:", taskTitle.value);
             console.log("Isi:", taskContent.value);
@@ -140,7 +156,8 @@
             }, 1500);
         });
 
-        checkConnection();
+        // Jalankan pengecekan otomatis saat halaman pertama kali dimuat
+        checkSession();
     </script>
 </body>
 </html>
