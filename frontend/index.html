@@ -83,8 +83,8 @@
     </div>
 
     <script type="module">
-        // Menggunakan JSDelivr yang dijamin stabil format ES Module-nya
-        import * as freighterApi from 'https://cdn.jsdelivr.net/npm/@stellar/freighter-api@6.0.1/+esm';
+        // Mengunci modul ke versi 1.5.0 secara spesifik
+        import { isAllowed, setAllowed, getUserInfo } from 'https://cdn.jsdelivr.net/npm/@stellar/freighter-api@1.5.0/+esm';
         
         // Ganti dengan Contract ID yang didapat dari terminal!
         const CONTRACT_ID = "CB7HQHDN4O7P5DMJPKGQ5GO7SZXS7XMIF4C73TUL36S7UDN6KHEODO2D"; 
@@ -97,52 +97,33 @@
         const taskContent = document.getElementById('taskContent');
         const taskList = document.getElementById('taskList');
 
-        // Kompatibilitas fungsi otomatis (mendukung Freighter lama dan baru)
-        const checkConnectionStatus = freighterApi.isConnected || freighterApi.isAllowed;
-        const requestWalletAccess = freighterApi.requestAccess || freighterApi.setAllowed;
-        const getWalletAddress = freighterApi.getAddress || freighterApi.getUserInfo;
-
-        function updateUI(publicKey) {
-            walletAddressSpan.innerText = publicKey.slice(0, 6) + '...' + publicKey.slice(-6);
-            connectBtn.classList.add('hidden');
-            walletInfo.classList.remove('hidden');
-            todoForm.classList.remove('hidden');
-            taskList.innerHTML = `<p>Mengambil data dari blockchain...</p>`;
-        }
-
-        async function checkSession() {
+        async function checkConnection() {
             try {
-                const status = await checkConnectionStatus();
-                // Menyesuaikan balasan format boolean atau object
-                if (status === true || status?.isConnected) {
-                    const info = await getWalletAddress();
-                    const address = info?.address || info?.publicKey;
-                    if (address) updateUI(address);
+                // Mengecek apakah sudah punya izin
+                if (await isAllowed()) {
+                    const userInfo = await getUserInfo();
+                    if (userInfo && userInfo.publicKey) {
+                        const pk = userInfo.publicKey;
+                        walletAddressSpan.innerText = pk.slice(0, 6) + '...' + pk.slice(-6);
+                        
+                        connectBtn.classList.add('hidden');
+                        walletInfo.classList.remove('hidden');
+                        todoForm.classList.remove('hidden');
+                        taskList.innerHTML = `<p>Mengambil data dari blockchain...</p>`;
+                    }
                 }
-            } catch (err) {
-                console.log("Sesi belum aktif");
+            } catch (error) {
+                console.error("Belum terhubung:", error);
             }
         }
 
         connectBtn.addEventListener('click', async () => {
             try {
-                const status = await checkConnectionStatus();
-                if (status === false || status?.isConnected === false) {
-                    alert("Ekstensi Freighter tidak terdeteksi atau sedang terkunci!");
-                    return;
-                }
-
-                // Memunculkan pop-up dompet
-                const access = await requestWalletAccess();
-                if (access?.error) {
-                    console.error("Gagal mendapat izin:", access.error);
-                } else {
-                    const info = await getWalletAddress();
-                    const address = info?.address || info?.publicKey;
-                    if (address) updateUI(address);
-                }
-            } catch (err) {
-                console.error("Proses koneksi dibatalkan", err);
+                // Meminta izin ke ekstensi Freighter
+                await setAllowed(); 
+                await checkConnection();
+            } catch (error) {
+                console.error("Proses koneksi dibatalkan user:", error);
             }
         });
 
@@ -165,8 +146,8 @@
             }, 1500);
         });
 
-        // Cek langsung saat file dibuka
-        checkSession();
+        // Cek koneksi saat file dibuka
+        checkConnection();
     </script>
 </body>
 </html>
