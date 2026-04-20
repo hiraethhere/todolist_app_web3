@@ -17,5 +17,7 @@ This application interacts with a smart contract deployed on the Stellar Testnet
 - **Contract ID:** CB7HQHDN4O7P5DMJPKGQ5GO7SZXS7XMIF4C73TUL36S7UDN6KHEODO2D
 
 ## 📸 Screenshot
-![Testnet UI Screenshot](Screenshot4.PNG)
+![UI Screenshot](Screenshot4.PNG)
+![Testnet UI Screenshot](Screenshot2.PNG)
+![Testnet UI Screenshot](Screenshot3.PNG)
 
