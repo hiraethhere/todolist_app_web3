@@ -18,6 +18,6 @@ This application interacts with a smart contract deployed on the Stellar Testnet
 
 ## 📸 Screenshot
 ![UI Screenshot](Screenshot4.PNG)
-![Testnet UI Screenshot](Screenshot2.PNG)
+![Testnet UI Screenshot](Screenshot5.PNG)
 ![Testnet UI Screenshot](Screenshot3.PNG)
 
