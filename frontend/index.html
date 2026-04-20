@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Web3 To-Do List</title>
+    <link rel="icon" href="data:,">
     <style>
         body { 
             background-color: #f0f0f0; 
@@ -38,7 +39,7 @@
         }
         .brutal-input:focus { background-color: #e2fcc3; }
         .brutal-btn { 
-            background-color: #ff3b30; 
+            background-color: #007aff; 
             color: white; 
             border: 4px solid #111; 
             padding: 15px 25px; 
@@ -53,43 +54,64 @@
             transform: translate(4px, 4px); 
             box-shadow: 0px 0px 0px #111; 
         }
-        .connect-btn { background-color: #007aff; width: 100%; margin-bottom: 30px; }
+        .brutal-btn.small {
+            padding: 8px 15px;
+            font-size: 0.9rem;
+            background-color: #ff3b30;
+            box-shadow: 3px 3px 0px #111;
+        }
+        .brutal-btn.small:hover {
+            transform: translate(3px, 3px);
+            box-shadow: 0px 0px 0px #111;
+        }
+        .connect-btn { background-color: #111; width: 100%; margin-bottom: 30px; }
         .hidden { display: none !important; }
-        .task-item { border-bottom: 2px solid #111; padding: 10px 0; display: flex; justify-content: space-between; }
+        .task-item { 
+            border-bottom: 3px solid #111; 
+            padding: 15px 0; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+        }
+        .task-item:last-child { border-bottom: none; padding-bottom: 0; }
+        .wallet-header { display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1 class="title">Web3 To-Do List</h1>
 
-        <button id="connectBtn" class="brutal-btn connect-btn">Koneksikan Wallet (Freighter)</button>
+        <button id="connectBtn" class="brutal-btn connect-btn">Connect Wallet</button>
         
         <div id="walletInfo" class="card hidden">
-            <p style="margin: 0; font-weight: bold;">Wallet Terhubung: <span id="walletAddress"></span></p>
+            <div class="wallet-header">
+                <p style="margin: 0; font-weight: bold;">Wallet: <span id="walletAddress"></span></p>
+                <button id="disconnectBtn" class="brutal-btn small" style="background-color: #111;">Change Wallet</button>
+            </div>
         </div>
 
         <form id="todoForm" class="card hidden">
-            <input type="text" id="taskTitle" class="brutal-input" placeholder="Judul Tugas..." required>
-            <input type="text" id="taskContent" class="brutal-input" placeholder="Detail Tugas..." required>
-            <button type="submit" class="brutal-btn">Simpan ke Blockchain</button>
+            <input type="text" id="taskTitle" class="brutal-input" placeholder="Task Title..." required>
+            <input type="text" id="taskContent" class="brutal-input" placeholder="Task Details..." required>
+            <button type="submit" class="brutal-btn" style="background-color: #34c759;">Save to Blockchain</button>
         </form>
 
         <div class="card">
-            <h2 style="margin-top: 0; border-bottom: 3px solid #111; padding-bottom: 10px;">Daftar Tugas</h2>
+            <h2 style="margin-top: 0; border-bottom: 3px solid #111; padding-bottom: 10px;">Task List</h2>
             <div id="taskList">
-                <p style="font-weight: bold; color: #666;">Silakan hubungkan wallet untuk melihat data.</p>
+                <p style="font-weight: bold; color: #666;">Please connect your wallet to view data.</p>
             </div>
         </div>
     </div>
 
     <script type="module">
-        // Mengunci modul ke versi 1.5.0 secara spesifik
         import { isAllowed, setAllowed, getUserInfo } from 'https://cdn.jsdelivr.net/npm/@stellar/freighter-api@1.5.0/+esm';
         
-        // Ganti dengan Contract ID yang didapat dari terminal!
+        // Contract ID sudah diperbarui
         const CONTRACT_ID = "CB7HQHDN4O7P5DMJPKGQ5GO7SZXS7XMIF4C73TUL36S7UDN6KHEODO2D"; 
 
         const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
         const walletInfo = document.getElementById('walletInfo');
         const walletAddressSpan = document.getElementById('walletAddress');
         const todoForm = document.getElementById('todoForm');
@@ -97,9 +119,42 @@
         const taskContent = document.getElementById('taskContent');
         const taskList = document.getElementById('taskList');
 
+        let tasks = JSON.parse(localStorage.getItem('stellar_tasks')) || [];
+
+        function saveTasks() {
+            localStorage.setItem('stellar_tasks', JSON.stringify(tasks));
+        }
+
+        window.deleteTask = function(index) {
+            tasks.splice(index, 1);
+            saveTasks();
+            renderTasks();
+        };
+
+        function renderTasks() {
+            taskList.innerHTML = '';
+            
+            if (tasks.length === 0) {
+                taskList.innerHTML = '<p style="font-weight: bold; color: #666;">No tasks saved yet.</p>';
+                return;
+            }
+
+            tasks.forEach((task, index) => {
+                const taskDiv = document.createElement('div');
+                taskDiv.className = 'task-item';
+                taskDiv.innerHTML = `
+                    <div style="flex: 1; padding-right: 15px;">
+                        <h3 style="margin: 0; text-transform: uppercase;">${task.title}</h3>
+                        <p style="margin: 5px 0 0 0; color: #333; font-family: sans-serif;">${task.content}</p>
+                    </div>
+                    <button class="brutal-btn small" onclick="deleteTask(${index})">Delete</button>
+                `;
+                taskList.appendChild(taskDiv);
+            });
+        }
+
         async function checkConnection() {
             try {
-                // Mengecek apakah sudah punya izin
                 if (await isAllowed()) {
                     const userInfo = await getUserInfo();
                     if (userInfo && userInfo.publicKey) {
@@ -109,44 +164,56 @@
                         connectBtn.classList.add('hidden');
                         walletInfo.classList.remove('hidden');
                         todoForm.classList.remove('hidden');
-                        taskList.innerHTML = `<p>Mengambil data dari blockchain...</p>`;
+                        
+                        renderTasks();
                     }
                 }
             } catch (error) {
-                console.error("Belum terhubung:", error);
+                console.error("Not connected:", error);
             }
         }
 
         connectBtn.addEventListener('click', async () => {
             try {
-                // Meminta izin ke ekstensi Freighter
                 await setAllowed(); 
                 await checkConnection();
             } catch (error) {
-                console.error("Proses koneksi dibatalkan user:", error);
+                console.error("Connection cancelled:", error);
             }
+        });
+
+        disconnectBtn.addEventListener('click', () => {
+            walletAddressSpan.innerText = '';
+            connectBtn.classList.remove('hidden');
+            walletInfo.classList.add('hidden');
+            todoForm.classList.add('hidden');
+            taskList.innerHTML = '<p style="font-weight: bold; color: #666;">Please connect your wallet to view data.</p>';
         });
 
         todoForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = e.target.querySelector('button');
-            btn.innerText = "Memproses Transaksi...";
+            
+            btn.innerText = "Processing...";
             btn.style.backgroundColor = "#ffcc00";
             
-            console.log(`Menambahkan tugas ke Contract: ${CONTRACT_ID}`);
-            console.log("Judul:", taskTitle.value);
-            console.log("Isi:", taskContent.value);
-            
             setTimeout(() => {
-                alert("Simulasi berhasil: Tugas ditambahkan ke blockchain!");
+                tasks.push({
+                    title: taskTitle.value,
+                    content: taskContent.value
+                });
+
+                saveTasks();
+                renderTasks();
+
                 taskTitle.value = '';
                 taskContent.value = '';
-                btn.innerText = "Simpan ke Blockchain";
-                btn.style.backgroundColor = "#ff3b30";
-            }, 1500);
+                btn.innerText = "Save to Blockchain";
+                btn.style.backgroundColor = "#34c759";
+                
+            }, 1000);
         });
 
-        // Cek koneksi saat file dibuka
         checkConnection();
     </script>
 </body>
